@@ -236,7 +236,7 @@
   /* Sky lantern container */
   #wall {
     position: relative;
-    min-height: 300px;
+    min-height: 450px; /* 稍微加高提供更好的展示空間 */
   }
 
   /* Individual lanterns */
@@ -259,11 +259,42 @@
   .lantern {
     position: relative;
     width: var(--size, 130px);
-    cursor: default;
+    cursor: pointer; /* 改為指針，提示可以滑過看內容 */
     transition: filter 0.3s;
     filter: drop-shadow(0 0 10px var(--glow));
   }
   .lantern svg { width: 100%; display: block; }
+
+  /* 修正文字懸浮框樣式：讓它預設微透明，滑鼠移上去時清晰顯現 */
+  .wish-popup {
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%) translateY(-5px);
+    background: rgba(16, 12, 38, 0.85);
+    border: 1px solid rgba(245, 200, 66, 0.4);
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    white-space: nowrap;
+    pointer-events: none;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+    z-index: 10;
+    transition: all 0.3s ease;
+    opacity: 0.7;
+  }
+  .lantern:hover .wish-popup {
+    opacity: 1;
+    background: rgba(28, 22, 53, 0.95);
+    border-color: rgba(245, 200, 66, 0.8);
+    transform: translateX(-50%) translateY(-10px) scale(1.05);
+  }
+  .wish-name {
+    color: var(--gold);
+    font-weight: bold;
+    margin-bottom: 2px;
+    font-family: var(--font-serif);
+  }
 
   /* String */
   .lantern-string {
@@ -285,7 +316,6 @@
 
   /* Count badge */
   .count-badge {
-    display: inline-block;
     background: rgba(245,200,66,0.15);
     border: 1px solid rgba(245,200,66,0.3);
     color: var(--gold);
@@ -293,11 +323,10 @@
     font-size: 13px;
     padding: 4px 16px;
     border-radius: 20px;
-    margin: 0 auto 20px;
+    margin: 0 auto 24px;
     text-align: center;
     display: block;
     width: fit-content;
-    margin: 0 auto 24px;
   }
 
   /* Floating particles */
@@ -327,7 +356,6 @@
 <div class="stars" id="stars"></div>
 <div class="moon"></div>
 
-<!-- Mountain SVG -->
 <svg class="mountains" viewBox="0 0 1440 220" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
   <polygon points="0,220 0,140 180,60 360,130 520,40 680,120 820,30 1000,110 1160,50 1320,100 1440,70 1440,220" fill="#0d0a22"/>
   <polygon points="0,220 0,170 120,110 280,160 420,90 560,150 700,80 860,140 1020,70 1160,130 1300,85 1440,115 1440,220" fill="#110d2a"/>
@@ -364,11 +392,29 @@
 
 <div class="wall-section">
   <div class="wall-title"><span>飄浮的心願</span></div>
-  <div class="count-badge" id="countBadge">尚無心願，成為第一位許願者 ✨</div>
+  <div class="count-badge" id="countBadge">正在連接星空... ✨</div>
   <div id="wall"></div>
 </div>
 
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+
 <script>
+// 填入你的 Firebase 配置資訊
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+  databaseURL: "https://YOUR_PROJECT_ID-default-rtdb.firebaseio.com",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_PROJECT_ID.appspot.com",
+  messagingSenderId: "YOUR_SENDER_ID",
+  appId: "YOUR_APP_ID"
+};
+
+// 初始化 Firebase
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database().ref("wishes");
+
 // ── Stars ──
 (function() {
   const s = document.getElementById('stars');
@@ -412,7 +458,6 @@ document.querySelectorAll('.color-option').forEach(el => {
 // ── Lantern SVG builder ──
 function buildLanternSVG(color, size) {
   const c = COLORS[color];
-  const s = size || 72;
   return `<svg viewBox="0 0 60 80" xmlns="http://www.w3.org/2000/svg">
     <defs>
       <radialGradient id="gf${color}" cx="50%" cy="60%" r="50%">
@@ -420,23 +465,15 @@ function buildLanternSVG(color, size) {
         <stop offset="100%" stop-color="rgba(255,200,80,0)"/>
       </radialGradient>
     </defs>
-    <!-- flame inner glow -->
     <ellipse cx="30" cy="66" rx="10" ry="7" fill="url(#gf${color})" opacity="0.6"/>
-    <!-- bottom ring -->
     <rect x="18" y="62" width="24" height="4" rx="2" fill="${c.dark}"/>
-    <!-- body -->
     <ellipse cx="30" cy="36" rx="24" ry="30" fill="${c.body}"/>
-    <!-- side panels -->
     <ellipse cx="30" cy="36" rx="12" ry="30" fill="${c.mid}" opacity="0.4"/>
-    <!-- highlight -->
     <ellipse cx="22" cy="28" rx="6" ry="10" fill="rgba(255,255,255,0.25)"/>
-    <!-- top ring -->
     <rect x="16" y="6" width="28" height="5" rx="2.5" fill="${c.dark}"/>
-    <!-- tassel lines -->
     <line x1="24" y1="66" x2="22" y2="76" stroke="${c.dark}" stroke-width="1.2" stroke-linecap="round"/>
     <line x1="30" y1="66" x2="30" y2="78" stroke="${c.dark}" stroke-width="1.2" stroke-linecap="round"/>
     <line x1="36" y1="66" x2="38" y2="76" stroke="${c.dark}" stroke-width="1.2" stroke-linecap="round"/>
-    <!-- flame flicker -->
     <ellipse cx="30" cy="70" rx="5" ry="6" fill="#fff5a0" opacity="0.8">
       <animate attributeName="rx" values="5;4;6;5" dur="0.8s" repeatCount="indefinite"/>
       <animate attributeName="ry" values="6;7;5;6" dur="0.8s" repeatCount="indefinite"/>
@@ -447,17 +484,10 @@ function buildLanternSVG(color, size) {
   </svg>`;
 }
 
-// ── Wishes store ──
-let wishes = [];
-try { wishes = JSON.parse(localStorage.getItem('wishwall') || '[]'); } catch(e) { wishes = []; }
-
-function saveWishes() {
-  try { localStorage.setItem('wishwall', JSON.stringify(wishes.slice(-80))); } catch(e) {}
-}
-
 // ── Wall state ──
-const WALL_HEIGHT = 600;
+const WALL_HEIGHT = 450;
 let activeLanterns = [];
+let totalWishCount = 0;
 const wall = document.getElementById('wall');
 wall.style.height = WALL_HEIGHT + 'px';
 wall.style.position = 'relative';
@@ -465,10 +495,10 @@ wall.style.overflow = 'hidden';
 
 function countBadgeUpdate() {
   const el = document.getElementById('countBadge');
-  if (wishes.length === 0) {
+  if (totalWishCount === 0) {
     el.textContent = '尚無心願，成為第一位許願者 ✨';
   } else {
-    el.textContent = `✦ 已有 ${wishes.length} 個心願飄向星空 ✦`;
+    el.textContent = `✦ 已有 ${totalWishCount} 個心願飄向星空 ✦`;
   }
 }
 
@@ -481,6 +511,8 @@ function spawnLantern(wish, animate) {
   const left = 5 + Math.random() * 80;
   const drift = (Math.random() - 0.5) * 80;
   const rot = (Math.random() - 0.5) * 14;
+  
+  // 如果是舊的歷史資料，隨機給予負延遲讓它一開始就散佈在空中；如果是新即時放飛的，就從底部升起
   const delay = animate ? 0 : -(Math.random() * dur);
 
   const wrap = document.createElement('div');
@@ -525,9 +557,11 @@ function spawnLantern(wish, animate) {
   }
 
   activeLanterns.push(wrap);
-  if (activeLanterns.length > 30) {
+  
+  // 畫面限制最多同時存在 40 盞天燈，避免效能低落
+  if (activeLanterns.length > 40) {
     const old = activeLanterns.shift();
-    if (old.parentNode) old.parentNode.removeChild(old);
+    if (old && old.parentNode) old.parentNode.removeChild(old);
   }
 }
 
@@ -555,7 +589,7 @@ function spawnSparks(x, y) {
   }
 }
 
-// ── Launch handler ──
+// ── Send to Firebase ──
 function launchLantern() {
   const wishText = document.getElementById('wishInput').value.trim();
   const nameText = document.getElementById('nameInput').value.trim();
@@ -571,21 +605,18 @@ function launchLantern() {
     name: nameText || '',
     wish: wishText,
     color: selectedColor,
-    ts: Date.now()
+    ts: firebase.database.ServerValue.TIMESTAMP // 使用伺服器時間
   };
-  wishes.push(wish);
-  saveWishes();
-  countBadgeUpdate();
 
-  // Spawn with animation
-  spawnLantern(wish, true);
+  // 僅推送到 Firebase，畫面天燈改由 Firebase 的監聽器統一處理生成
+  db.push(wish);
 
-  // Sparks from button
+  // 按鈕特效
   const btn = document.getElementById('submitBtn');
   const rect = btn.getBoundingClientRect();
   spawnSparks(rect.left + rect.width/2, rect.top + rect.height/2);
 
-  // Reset form
+  // 重設輸入框
   document.getElementById('wishInput').value = '';
   document.getElementById('nameInput').value = '';
 }
@@ -595,22 +626,42 @@ document.getElementById('wishInput').addEventListener('keydown', e => {
   if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) launchLantern();
 });
 
-// ── Init: populate from saved wishes ──
-(function init() {
-  countBadgeUpdate();
-  const toShow = wishes.slice(-20);
-  toShow.forEach(w => spawnLantern(w, false));
+// ── Firebase Realtime Data 監聽 ──
+(function initFirebase() {
+  let isInitialLoad = true;
+  
+  // 先取得總數更新計數器
+  db.on('value', snapshot => {
+    totalWishCount = snapshot.numChildren();
+    countBadgeUpdate();
+    
+    // 如果資料庫全空，顯示預設天燈
+    if (totalWishCount === 0) {
+      const demos = [
+        { name:'小明', wish:'希望考試順利，金榜題名！', color:'red' },
+        { name:'雅婷', wish:'願家人身體健康，平安幸福。', color:'gold' },
+        { name:'志豪', wish:'學業進步，心想事成！', color:'teal' }
+      ];
+      demos.forEach(d => spawnLantern(d, false));
+    }
+  });
 
-  // Always show some demo lanterns if empty
-  if (wishes.length === 0) {
-    const demos = [
-      { name:'小明', wish:'希望考試順利，金榜題名！', color:'red' },
-      { name:'雅婷', wish:'願家人身體健康，平安幸福。', color:'gold' },
-      { name:'志豪', wish:'學業進步，心想事成！', color:'teal' },
-      { name:'',     wish:'世界和平，人人快樂。', color:'purple' },
-    ];
-    demos.forEach(d => spawnLantern(d, false));
-  }
+  // 監聽新資料庫增量 (包含載入歷史)
+  // 只載入最後的 30 筆歷史，避免太多舊天燈卡死畫面
+  db.limitToLast(30).on('child_added', snapshot => {
+    const wish = snapshot.val();
+    
+    if (isInitialLoad) {
+      // 網頁剛打開時，歷史天燈隨機分布在空中
+      spawnLantern(wish, false);
+    } else {
+      // 網頁開著時，別人即時送出的天燈，從底部動畫飛出
+      spawnLantern(wish, true);
+    }
+  });
+
+  // 設定一個極短時間差，區分歷史資料與即時新進資料
+  setTimeout(() => { isInitialLoad = false; }, 800);
 })();
 </script>
 </body>
