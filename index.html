@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>祈福牆 — 心願天燈</title>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700&family=Noto+Sans+TC:wght@300;400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght=400;600;700&family=Noto+Sans+TC:wght=300;400;500&display=swap" rel="stylesheet">
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -236,7 +236,7 @@
   /* Sky lantern container */
   #wall {
     position: relative;
-    min-height: 450px; /* 稍微加高提供更好的展示空間 */
+    min-height: 400px;
   }
 
   /* Individual lanterns */
@@ -259,20 +259,20 @@
   .lantern {
     position: relative;
     width: var(--size, 130px);
-    cursor: pointer; /* 改為指針，提示可以滑過看內容 */
+    cursor: pointer;
     transition: filter 0.3s;
     filter: drop-shadow(0 0 10px var(--glow));
   }
   .lantern svg { width: 100%; display: block; }
 
-  /* 修正文字懸浮框樣式：讓它預設微透明，滑鼠移上去時清晰顯現 */
+  /* 調整文字提示框：平時微透明，滑鼠懸停時放大變清晰 */
   .wish-popup {
     position: absolute;
     bottom: 100%;
     left: 50%;
     transform: translateX(-50%) translateY(-5px);
     background: rgba(16, 12, 38, 0.85);
-    border: 1px solid rgba(245, 200, 66, 0.4);
+    border: 1px solid rgba(245, 200, 66, 0.3);
     padding: 8px 12px;
     border-radius: 6px;
     font-size: 12px;
@@ -280,14 +280,14 @@
     pointer-events: none;
     box-shadow: 0 4px 15px rgba(0,0,0,0.5);
     z-index: 10;
+    opacity: 0.75;
     transition: all 0.3s ease;
-    opacity: 0.7;
   }
   .lantern:hover .wish-popup {
     opacity: 1;
     background: rgba(28, 22, 53, 0.95);
     border-color: rgba(245, 200, 66, 0.8);
-    transform: translateX(-50%) translateY(-10px) scale(1.05);
+    transform: translateX(-50%) translateY(-12px) scale(1.05);
   }
   .wish-name {
     color: var(--gold);
@@ -316,6 +316,7 @@
 
   /* Count badge */
   .count-badge {
+    display: inline-block;
     background: rgba(245,200,66,0.15);
     border: 1px solid rgba(245,200,66,0.3);
     color: var(--gold);
@@ -392,7 +393,7 @@
 
 <div class="wall-section">
   <div class="wall-title"><span>飄浮的心願</span></div>
-  <div class="count-badge" id="countBadge">正在連接星空... ✨</div>
+  <div class="count-badge" id="countBadge">正在連接星空伺服器... ✨</div>
   <div id="wall"></div>
 </div>
 
@@ -400,7 +401,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
 
 <script>
-// 填入你的 Firebase 配置資訊
+// ⚠️ 請將此處替換成你在 Firebase 後台申請的專案 Config 資訊
 const firebaseConfig = {
   apiKey: "YOUR_API_KEY",
   authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
@@ -415,7 +416,7 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database().ref("wishes");
 
-// ── Stars ──
+// ── Stars 星空背景 ──
 (function() {
   const s = document.getElementById('stars');
   for (let i = 0; i < 120; i++) {
@@ -434,7 +435,7 @@ const db = firebase.database().ref("wishes");
   }
 })();
 
-// ── Color palette ──
+// ── 色系設定 ──
 const COLORS = {
   red:    { body:'#e84c3d', mid:'#c0392b', dark:'#8e2217', glow:'rgba(232,76,61,0.7)',  char:'紅' },
   gold:   { body:'#f5e060', mid:'#f5c842', dark:'#c9952e', glow:'rgba(245,200,66,0.7)', char:'金' },
@@ -446,7 +447,7 @@ const COLORS = {
 
 let selectedColor = 'red';
 
-// Color selector
+// 選擇顏色事件
 document.querySelectorAll('.color-option').forEach(el => {
   el.addEventListener('click', () => {
     document.querySelectorAll('.color-option').forEach(e => e.classList.remove('active'));
@@ -455,7 +456,7 @@ document.querySelectorAll('.color-option').forEach(el => {
   });
 });
 
-// ── Lantern SVG builder ──
+// ── 生成天燈 SVG ──
 function buildLanternSVG(color, size) {
   const c = COLORS[color];
   return `<svg viewBox="0 0 60 80" xmlns="http://www.w3.org/2000/svg">
@@ -484,8 +485,8 @@ function buildLanternSVG(color, size) {
   </svg>`;
 }
 
-// ── Wall state ──
-const WALL_HEIGHT = 450;
+// ── 牆面狀態與渲染 ──
+const WALL_HEIGHT = 400;
 let activeLanterns = [];
 let totalWishCount = 0;
 const wall = document.getElementById('wall');
@@ -502,7 +503,7 @@ function countBadgeUpdate() {
   }
 }
 
-// ── Launch a lantern (add to wall) ──
+// 將天燈推到畫面上
 function spawnLantern(wish, animate) {
   const color = wish.color || 'red';
   const c = COLORS[color];
@@ -512,7 +513,8 @@ function spawnLantern(wish, animate) {
   const drift = (Math.random() - 0.5) * 80;
   const rot = (Math.random() - 0.5) * 14;
   
-  // 如果是舊的歷史資料，隨機給予負延遲讓它一開始就散佈在空中；如果是新即時放飛的，就從底部升起
+  // 如果是舊的歷史天燈（網頁剛開時），隨機給予負數 delay 讓它們均勻分布在半空中
+  // 如果是有人剛送出的新天燈，delay 為 0，從底部升起
   const delay = animate ? 0 : -(Math.random() * dur);
 
   const wrap = document.createElement('div');
@@ -532,7 +534,7 @@ function spawnLantern(wish, animate) {
   lanternEl.style.cssText = `width:${size}px; --glow:${c.glow};`;
   lanternEl.innerHTML = buildLanternSVG(color, size);
 
-  // Popup
+  // 內容視窗
   const popup = document.createElement('div');
   popup.className = 'wish-popup';
   const nameHtml = wish.name ? `<div class="wish-name">${escHtml(wish.name)}</div>` : '';
@@ -558,7 +560,7 @@ function spawnLantern(wish, animate) {
 
   activeLanterns.push(wrap);
   
-  // 畫面限制最多同時存在 40 盞天燈，避免效能低落
+  // 畫面上最多同時留 40 盞，避免天燈過多卡頓
   if (activeLanterns.length > 40) {
     const old = activeLanterns.shift();
     if (old && old.parentNode) old.parentNode.removeChild(old);
@@ -569,7 +571,7 @@ function escHtml(str) {
   return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-// ── Sparks burst ──
+// ── 金星粒子特效 ──
 function spawnSparks(x, y) {
   for (let i = 0; i < 14; i++) {
     const sp = document.createElement('div');
@@ -589,7 +591,7 @@ function spawnSparks(x, y) {
   }
 }
 
-// ── Send to Firebase ──
+// ── 發送天燈到 Firebase ──
 function launchLantern() {
   const wishText = document.getElementById('wishInput').value.trim();
   const nameText = document.getElementById('nameInput').value.trim();
@@ -597,72 +599,4 @@ function launchLantern() {
   if (!wishText) {
     document.getElementById('wishInput').focus();
     document.getElementById('wishInput').style.borderColor = 'rgba(232,76,61,0.8)';
-    setTimeout(() => document.getElementById('wishInput').style.borderColor = '', 1200);
-    return;
-  }
-
-  const wish = {
-    name: nameText || '',
-    wish: wishText,
-    color: selectedColor,
-    ts: firebase.database.ServerValue.TIMESTAMP // 使用伺服器時間
-  };
-
-  // 僅推送到 Firebase，畫面天燈改由 Firebase 的監聽器統一處理生成
-  db.push(wish);
-
-  // 按鈕特效
-  const btn = document.getElementById('submitBtn');
-  const rect = btn.getBoundingClientRect();
-  spawnSparks(rect.left + rect.width/2, rect.top + rect.height/2);
-
-  // 重設輸入框
-  document.getElementById('wishInput').value = '';
-  document.getElementById('nameInput').value = '';
-}
-
-// ── Enter key support ──
-document.getElementById('wishInput').addEventListener('keydown', e => {
-  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) launchLantern();
-});
-
-// ── Firebase Realtime Data 監聽 ──
-(function initFirebase() {
-  let isInitialLoad = true;
-  
-  // 先取得總數更新計數器
-  db.on('value', snapshot => {
-    totalWishCount = snapshot.numChildren();
-    countBadgeUpdate();
-    
-    // 如果資料庫全空，顯示預設天燈
-    if (totalWishCount === 0) {
-      const demos = [
-        { name:'小明', wish:'希望考試順利，金榜題名！', color:'red' },
-        { name:'雅婷', wish:'願家人身體健康，平安幸福。', color:'gold' },
-        { name:'志豪', wish:'學業進步，心想事成！', color:'teal' }
-      ];
-      demos.forEach(d => spawnLantern(d, false));
-    }
-  });
-
-  // 監聽新資料庫增量 (包含載入歷史)
-  // 只載入最後的 30 筆歷史，避免太多舊天燈卡死畫面
-  db.limitToLast(30).on('child_added', snapshot => {
-    const wish = snapshot.val();
-    
-    if (isInitialLoad) {
-      // 網頁剛打開時，歷史天燈隨機分布在空中
-      spawnLantern(wish, false);
-    } else {
-      // 網頁開著時，別人即時送出的天燈，從底部動畫飛出
-      spawnLantern(wish, true);
-    }
-  });
-
-  // 設定一個極短時間差，區分歷史資料與即時新進資料
-  setTimeout(() => { isInitialLoad = false; }, 800);
-})();
-</script>
-</body>
-</html>
+    setTimeout(()
